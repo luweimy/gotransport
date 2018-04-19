@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/luweimy/gotransport"
-	"github.com/luweimy/gotransport/protocol"
 )
 
 func errorCheck(err error) {
@@ -29,13 +28,25 @@ func onClose(transport gotransport.Transport) {
 	log.Println("ON-CLOSE", transport.Peer())
 }
 
-func onMessage(transport gotransport.Transport, packet protocol.Protocol) {
+func onMessage(transport gotransport.Transport, packet gotransport.Protocol) {
 	log.Println("ON-MSG", transport.Peer(), packet.Type(), string(packet.Payload()))
-	transport.WriteString("=> ok")
+	//transport.WriteString(string(packet.Payload()))
+	transport.WritePacket(packet)
 }
 
-func TestNew(t *testing.T) {
-	server := New(gotransport.WithConnect(onConnect), gotransport.WithClose(onClose), gotransport.WithError(onErr), gotransport.WithMessage(onMessage), gotransport.WithFactory(protocol.LineFactory{}))
+func TestServer(t *testing.T) {
+	server := New(gotransport.WithFactory(gotransport.LineProtocol))
+	server.Options(gotransport.WithConnected(onConnect))
+	server.Options(gotransport.WithClosed(onClose))
+	server.Options(gotransport.WithError(onErr))
+	server.Options(gotransport.WithMessage(onMessage))
+
+	//go func() {
+	//	time.Sleep(time.Second * 3)
+	//	fmt.Println("server close before")
+	//	server.Close()
+	//	fmt.Println("server close after")
+	//}()
 	err := server.Listen("tcp", "127.0.0.1:9090")
 	errorCheck(err)
 }

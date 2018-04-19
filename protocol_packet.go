@@ -1,4 +1,4 @@
-package protocol
+package gotransport
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ const (
 	HeaderSize    = 5                 // type(1-byte) + length(4-byte)
 )
 
-// Packet
+// packetProtocol
 // message format:
 //  [00000000][00000000][00000000][00000000][00000000][00000000][00000000]...
 //  | (uint8)||               (uint32)               ||     (binary)
@@ -23,32 +23,32 @@ const (
 //      type                   length                        value
 //       \-----------------------/
 //            header(5-byte)
-type Packet struct {
+type packetProtocol struct {
 	tag   byte
 	value []byte
 }
 
-func NewPacket() *Packet {
-	return &Packet{}
+func PacketProtocol() Protocol {
+	return &packetProtocol{}
 }
 
-func (p *Packet) Payload() []byte {
+func (p *packetProtocol) Payload() []byte {
 	return p.value
 }
 
-func (p *Packet) Type() byte {
+func (p *packetProtocol) Type() byte {
 	return p.tag
 }
 
-func (p *Packet) SetPayload(payload []byte) {
+func (p *packetProtocol) SetPayload(payload []byte) {
 	p.value = payload
 }
 
-func (p *Packet) SetType(tp byte) {
+func (p *packetProtocol) SetType(tp byte) {
 	p.tag = tp
 }
 
-func (p *Packet) WriteTo(w io.Writer) (int, error) {
+func (p *packetProtocol) WriteTo(w io.Writer) (int, error) {
 	if len(p.value)+HeaderSize > MaxPacketSize {
 		return 0, ErrTooLarge
 	}
@@ -74,7 +74,7 @@ func (p *Packet) WriteTo(w io.Writer) (int, error) {
 	return total, nil
 }
 
-func (p *Packet) ReadFrom(r io.Reader) (int, error) {
+func (p *packetProtocol) ReadFrom(r io.Reader) (int, error) {
 	var (
 		total int
 	)
@@ -104,7 +104,7 @@ func (p *Packet) ReadFrom(r io.Reader) (int, error) {
 	return total, nil
 }
 
-func (p *Packet) Pack() ([]byte, error) {
+func (p *packetProtocol) Pack() ([]byte, error) {
 	buf := &bytes.Buffer{}
 	if _, err := p.WriteTo(buf); err != nil {
 		return nil, err
@@ -112,13 +112,6 @@ func (p *Packet) Pack() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (p *Packet) Unpack(data []byte) (int, error) {
+func (p *packetProtocol) Unpack(data []byte) (int, error) {
 	return p.ReadFrom(bytes.NewBuffer(data))
-}
-
-type PacketFactory struct {
-}
-
-func (PacketFactory) Build() Protocol {
-	return NewPacket()
 }

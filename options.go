@@ -1,60 +1,67 @@
 package gotransport
 
-import "github.com/luweimy/gotransport/protocol"
-
-type OnConnectFunc func(Transport) bool
-type OnMessageFunc func(Transport, protocol.Protocol)
-type OnCloseFunc func(Transport)
-type OnErrorFunc func(Transport, error)
+type ConnectHandler func(transport Transport) bool
+type MessageHandler func(transport Transport, packet Protocol)
+type CloseHandler func(transport Transport)
+type ErrorHandler func(transport Transport, err error)
 
 type Options struct {
-	OnConnect OnConnectFunc
-	OnMessage OnMessageFunc
-	OnClose   OnCloseFunc
-	OnError   OnErrorFunc
-	Factory   protocol.Factory
+	OnConnected ConnectHandler
+	OnMessage   MessageHandler
+	OnClosed    CloseHandler
+	OnClosing   CloseHandler
+	OnError     ErrorHandler
+	Factory     ProtocolFactory
+	BufferSize  int // size of transport reader buffer
 	//workerSize int  // numbers of worker go-routines
-	//bufferSize int  // size of buffered channel
 }
 
-func MakeOptions() Options {
-	return Options{
-		OnConnect: func(Transport) bool { return true },
-		OnMessage: func(Transport, protocol.Protocol) {},
-		OnClose:   func(Transport) {},
-		OnError:   func(Transport, error) {},
-		Factory:   protocol.PacketFactory{},
+func MakeOptions() *Options {
+	return &Options{
+		Factory: PacketProtocol,
 	}
 }
 
 type OptionFunc func(*Options)
 
-func WithConnect(cb OnConnectFunc) OptionFunc {
+func WithConnected(cb ConnectHandler) OptionFunc {
 	return func(o *Options) {
-		o.OnConnect = cb
+		o.OnConnected = cb
 	}
 }
 
-func WithMessage(cb OnMessageFunc) OptionFunc {
+func WithMessage(cb MessageHandler) OptionFunc {
 	return func(o *Options) {
 		o.OnMessage = cb
 	}
 }
 
-func WithClose(cb OnCloseFunc) OptionFunc {
+func WithClosed(cb CloseHandler) OptionFunc {
 	return func(o *Options) {
-		o.OnClose = cb
+		o.OnClosed = cb
 	}
 }
 
-func WithError(cb OnErrorFunc) OptionFunc {
+func WithClosing(cb CloseHandler) OptionFunc {
+	return func(o *Options) {
+		o.OnClosing = cb
+	}
+}
+
+func WithError(cb ErrorHandler) OptionFunc {
 	return func(o *Options) {
 		o.OnError = cb
 	}
 }
 
-func WithFactory(factory protocol.Factory) OptionFunc {
+func WithFactory(factory ProtocolFactory) OptionFunc {
 	return func(o *Options) {
 		o.Factory = factory
+	}
+}
+
+func WithBufferSize(bufferSize int) OptionFunc {
+	return func(o *Options) {
+		o.BufferSize = bufferSize
 	}
 }

@@ -1,4 +1,4 @@
-package protocol
+package gotransport
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ func assertErr(err error) {
 }
 
 func TestPacket_Pack(t *testing.T) {
-	p := Packet{}
+	p := packetProtocol{}
 	p.SetType(0x02)
 	p.SetPayload([]byte{3, 2})
 
@@ -28,7 +28,7 @@ func TestPacket_Pack(t *testing.T) {
 	assert(len(packedData) == 7)
 	assert(bytes.Compare([]byte{2, 0, 0, 0, 2, 3, 2}, packedData) == 0)
 
-	p2 := Packet{}
+	p2 := packetProtocol{}
 	n, err := p2.Unpack(packedData)
 	assertErr(err)
 	assert(n == 7)
@@ -36,7 +36,7 @@ func TestPacket_Pack(t *testing.T) {
 	assert(bytes.Compare(p.Payload(), p2.Payload()) == 0)
 
 	buf1 := bytes.NewBuffer(packedData)
-	p3 := Packet{}
+	p3 := packetProtocol{}
 	n, err = p3.ReadFrom(buf1)
 	assertErr(err)
 	assert(n == 7)

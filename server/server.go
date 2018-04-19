@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/luweimy/gotransport"
@@ -15,27 +14,31 @@ var (
 )
 
 type Server struct {
-	opts gotransport.Options
+	opts *gotransport.Options
 	ctx  context.Context
 
 	ln net.Listener
-	mu sync.Mutex
 }
 
 func New(opts ...gotransport.OptionFunc) *Server {
 	s := &Server{
-		ctx:  context.Background(),
 		opts: gotransport.MakeOptions(),
+		ctx:  context.Background(),
 	}
-	for _, o := range opts {
-		o(&s.opts)
-	}
+	s.Options(opts...)
 	return s
 }
 
+func (s *Server) Options(opts ...gotransport.OptionFunc) {
+	for _, o := range opts {
+		o(s.opts)
+	}
+}
+
+// Listen announces on the local network address.
+//
+// The network must be "tcp", "tcp4", "tcp6", "unix" or "unixpacket".
 func (s *Server) Listen(network, address string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if s.ln != nil {
 		return ErrMultipleListenCalls
 	}
@@ -47,24 +50,17 @@ func (s *Server) Listen(network, address string) error {
 	return s.listenLoop(ln)
 }
 
-func (s *Server) Host() net.Addr {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.ln == nil {
-		return nil
-	}
+// Addr returns the listener's network address, a *TCPAddr.
+// The Addr returned is shared by all invocations of Addr, so
+// do not modify it.
+func (s *Server) Addr() net.Addr {
 	return s.ln.Addr()
 }
 
+// Close stops listening on the TCP address.
+// Already Accepted connections are not closed.
 func (s *Server) Close() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.ln == nil {
-		return nil
-	}
-	ln := s.ln
-	s.ln = nil
-	return ln.Close()
+	return s.ln.Close()
 }
 
 func (s *Server) listenLoop(ln net.Listener) error {
@@ -91,11 +87,6 @@ func (s *Server) listenLoop(ln net.Listener) error {
 		}
 		delay = 0
 
-		transport := gotransport.NewTransport(conn, s.opts)
-		if s.opts.OnConnect != nil && !s.opts.OnConnect(transport) {
-			conn.Close()
-			continue
-		}
-		go transport.ReadLoop()
+		gotransport.NewTransport(conn, s.opts).AsyncLoop()
 	}
 }

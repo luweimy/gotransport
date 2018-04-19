@@ -1,4 +1,4 @@
-package protocol
+package gotransport
 
 import (
 	"bufio"
@@ -6,39 +6,38 @@ import (
 	"io"
 )
 
-type Line struct {
+type lineProtocol struct {
 	data []byte
 }
 
-func NewLine() *Line {
-	return &Line{}
+func LineProtocol() Protocol {
+	return &lineProtocol{}
 }
 
-func (l *Line) Payload() []byte {
+func (l *lineProtocol) Payload() []byte {
 	return l.data
 }
 
-func (l *Line) Type() byte {
+func (l *lineProtocol) Type() byte {
 	return 0
 }
 
-func (p *Line) SetPayload(payload []byte) {
+func (p *lineProtocol) SetPayload(payload []byte) {
 	p.data = payload
 }
 
-func (p *Line) SetType(tp byte) {
-	panic(ErrNotImplement)
+func (p *lineProtocol) SetType(tp byte) {
+	panic(ErrNotImplemented)
 }
 
-func (p *Line) WriteTo(w io.Writer) (int, error) {
-	// windows:\r\n，unix:\n，mac:\n
+func (p *lineProtocol) WriteTo(w io.Writer) (int, error) {
 	if p.data[len(p.data)-1] != '\n' {
 		p.data = append(p.data, '\n')
 	}
 	return w.Write(p.data)
 }
 
-func (p *Line) ReadFrom(r io.Reader) (int, error) {
+func (p *lineProtocol) ReadFrom(r io.Reader) (int, error) {
 	var (
 		reader = bufio.NewReader(r)
 		buffer = bytes.Buffer{}
@@ -59,11 +58,4 @@ func (p *Line) ReadFrom(r io.Reader) (int, error) {
 
 	p.data = buffer.Bytes()
 	return len(p.data), nil
-}
-
-type LineFactory struct {
-}
-
-func (LineFactory) Build() Protocol {
-	return NewLine()
 }

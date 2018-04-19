@@ -1,4 +1,4 @@
-package protocol
+package gotransport
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ErrNotImplement = errors.New("not implement")
+	ErrNotImplemented = errors.New("not implemented")
 )
 
 type Protocol interface {
@@ -14,11 +14,10 @@ type Protocol interface {
 	ReadFrom(r io.Reader) (int, error)
 
 	Payload() []byte
-	Type() byte
 	SetPayload([]byte)
+
+	Type() byte
 	SetType(byte)
 }
 
-type Factory interface {
-	Build() Protocol
-}
+type ProtocolFactory func() Protocol
