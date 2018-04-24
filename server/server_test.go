@@ -29,7 +29,7 @@ func onClose(transport gotransport.Transport) {
 }
 
 func onMessage(transport gotransport.Transport, packet gotransport.Protocol) {
-	log.Println("ON-MSG", transport.Peer(), packet.Type(), string(packet.Payload()))
+	log.Println("ON-MSG", transport.Peer(), packet.Flags(), string(packet.Payload()))
 	//transport.WriteString(string(packet.Payload()))
 	transport.WritePacket(packet)
 }

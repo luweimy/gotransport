@@ -2,6 +2,7 @@ package gotransport
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"net"
 )
@@ -10,49 +11,75 @@ const (
 	DefaultBufferSize = 1024
 )
 
-// 代表一个连接
+// Transport representing a network connection
 type Transport interface {
+	// Write writes data to the connection.
+	// Write can be made to time out and return an Error with Timeout() == true
+	// after a fixed time limit; see SetDeadline and SetWriteDeadline.
 	Write(b []byte) (n int, err error)
 	WriteString(s string) (n int, err error)
 	WritePacket(packet Protocol) (n int, err error)
 
-	//SetWriteDeadline(t time.Time) error
+	// Close closes the connection.
+	// Any blocked Read or Write operations will be unblocked and return errors.
+	Close() error
+	IsClosed() bool
 
-	Close() error   // 关闭连接
-	IsClosed() bool // 是否已经关闭
-	Peer() net.Addr // 获取对方信息
-	Host() net.Addr // 获取本机信息
+	// Peer returns the remote network address.
+	Peer() net.Addr
+
+	// Host returns the local network address.
+	Host() net.Addr
+
+	ProtocolMake() Protocol
 
 	//Error() <-chan error
 	//Done() <-chan struct{}
+}
 
-	Protocol() Protocol
+type TransportHijacker interface {
+	Hijack() net.Conn
 }
 
 type transport struct {
-	opts *Options
+	ctx  context.Context
 	conn net.Conn
+	rw   io.ReadWriter // 方便hook conn的读写
+	opts *Options
 }
 
-func NewTransport(conn net.Conn, opts *Options) *transport {
+func NewTransport(ctx context.Context, conn net.Conn, opts *Options) *transport {
 	if opts == nil {
 		opts = MakeOptions()
 	}
 	t := &transport{
-		opts: opts,
+		ctx:  ctx,
 		conn: conn,
+		rw:   conn,
+		opts: opts,
+	}
+	for _, hook := range opts.ConnHooks {
+		t.conn = hook(t.conn)
+	}
+	t.rw = t.conn
+	for _, hook := range opts.Hooks {
+		t.rw = hook(t.rw)
 	}
 	return t
 }
 
-func (t *transport) Protocol() Protocol {
+func (t *transport) Hijack() net.Conn {
+	return t.conn
+}
+
+func (t *transport) ProtocolMake() Protocol {
 	return t.opts.Factory()
 }
 
 func (t *transport) Write(b []byte) (n int, err error) {
-	packet := t.Protocol()
+	packet := t.ProtocolMake()
 	packet.SetPayload(b)
-	return packet.WriteTo(t.conn)
+	return packet.WriteTo(t.rw)
 }
 
 func (t *transport) WriteString(s string) (n int, err error) {
@@ -60,7 +87,7 @@ func (t *transport) WriteString(s string) (n int, err error) {
 }
 
 func (t *transport) WritePacket(packet Protocol) (n int, err error) {
-	return packet.WriteTo(t.conn)
+	return packet.WriteTo(t.rw)
 }
 
 func (t *transport) Close() error {
@@ -80,7 +107,7 @@ func (t *transport) IsClosed() bool {
 	if t.conn == nil {
 		return true
 	}
-	_, err := t.conn.Read([]byte{})
+	_, err := t.rw.Read([]byte{})
 	return IsClosedConnError(err)
 }
 
@@ -92,7 +119,7 @@ func (t *transport) Host() net.Addr {
 	return t.conn.LocalAddr()
 }
 
-func (t *transport) SyncLoop() *transport {
+func (t *transport) LoopSync() *transport {
 	if t.opts.OnConnected != nil && !t.opts.OnConnected(t) {
 		t.conn.Close()
 		return t
@@ -101,7 +128,7 @@ func (t *transport) SyncLoop() *transport {
 	return t
 }
 
-func (t *transport) AsyncLoop() *transport {
+func (t *transport) LoopAsync() *transport {
 	if t.opts.OnConnected != nil && !t.opts.OnConnected(t) {
 		t.conn.Close()
 		return t
@@ -125,9 +152,15 @@ func (t *transport) readLoop() {
 	if t.opts.BufferSize > 0 {
 		bufferSize = t.opts.BufferSize
 	}
-	reader := bufio.NewReaderSize(t.conn, bufferSize)
+	reader := bufio.NewReaderSize(t.rw, bufferSize)
 	for {
-		packet := t.Protocol()
+		// TODO: timeout 不准
+		select {
+		case <-t.ctx.Done():
+			return
+		default:
+		}
+		packet := t.ProtocolMake()
 		_, err := packet.ReadFrom(reader)
 		if err != nil {
 			if err == io.EOF {

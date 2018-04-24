@@ -64,6 +64,9 @@ func (s *Server) Close() error {
 }
 
 func (s *Server) listenLoop(ln net.Listener) error {
+	defer func() {
+		ln.Close()
+	}()
 	var delay time.Duration
 	for {
 		conn, err := ln.Accept()
@@ -87,6 +90,6 @@ func (s *Server) listenLoop(ln net.Listener) error {
 		}
 		delay = 0
 
-		gotransport.NewTransport(conn, s.opts).AsyncLoop()
+		gotransport.NewTransport(s.ctx, conn, s.opts).LoopAsync()
 	}
 }

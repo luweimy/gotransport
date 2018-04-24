@@ -1,9 +1,17 @@
 package gotransport
 
+import (
+	"io"
+	"net"
+)
+
 type ConnectHandler func(transport Transport) bool
 type MessageHandler func(transport Transport, packet Protocol)
 type CloseHandler func(transport Transport)
 type ErrorHandler func(transport Transport, err error)
+
+type ReadWriterHookHandler func(rw io.ReadWriter) io.ReadWriter
+type ConnHookHandler func(conn net.Conn) net.Conn
 
 type Options struct {
 	OnConnected ConnectHandler
@@ -13,6 +21,8 @@ type Options struct {
 	OnError     ErrorHandler
 	Factory     ProtocolFactory
 	BufferSize  int // size of transport reader buffer
+	Hooks       []ReadWriterHookHandler
+	ConnHooks   []ConnHookHandler
 	//workerSize int  // numbers of worker go-routines
 }
 
@@ -63,5 +73,18 @@ func WithFactory(factory ProtocolFactory) OptionFunc {
 func WithBufferSize(bufferSize int) OptionFunc {
 	return func(o *Options) {
 		o.BufferSize = bufferSize
+	}
+}
+
+// Hook conn read and write
+func WithHook(hook ReadWriterHookHandler) OptionFunc {
+	return func(o *Options) {
+		o.Hooks = append(o.Hooks, hook)
+	}
+}
+
+func WithHookConn(hook ConnHookHandler) OptionFunc {
+	return func(o *Options) {
+		o.ConnHooks = append(o.ConnHooks, hook)
 	}
 }

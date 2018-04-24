@@ -36,16 +36,20 @@ func (p *packetProtocol) Payload() []byte {
 	return p.value
 }
 
-func (p *packetProtocol) Type() byte {
-	return p.tag
-}
-
 func (p *packetProtocol) SetPayload(payload []byte) {
 	p.value = payload
 }
 
-func (p *packetProtocol) SetType(tp byte) {
-	p.tag = tp
+func (p *packetProtocol) SetFlags(value interface{}) error {
+	if tag, ok := value.(byte); ok {
+		p.tag = tag
+		return nil
+	}
+	return ErrTypeNotSupport
+}
+
+func (p *packetProtocol) Flags() Flags {
+	return FlagsValue{p.tag}
 }
 
 func (p *packetProtocol) WriteTo(w io.Writer) (int, error) {

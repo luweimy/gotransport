@@ -16,16 +16,16 @@ func (r *rawProtocol) Payload() []byte {
 	return r.data
 }
 
-func (l *rawProtocol) Type() byte {
-	return 0
-}
-
 func (p *rawProtocol) SetPayload(payload []byte) {
 	p.data = payload
 }
 
-func (p *rawProtocol) SetType(tp byte) {
-	panic(ErrNotImplemented)
+func (p *rawProtocol) SetFlags(value interface{}) error {
+	return ErrFlagsNotSupport
+}
+
+func (p *rawProtocol) Flags() Flags {
+	return FlagsValue{}
 }
 
 func (p *rawProtocol) WriteTo(w io.Writer) (int, error) {

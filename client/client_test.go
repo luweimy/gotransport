@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"log"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,13 +34,7 @@ func TestClient(t *testing.T) {
 		}
 		for {
 			time.Sleep(time.Second * 2)
-			//p := transport.NewlineProtocol()
-			//p.Type = 0x01
-			//p.Value = bytes.Repeat([]byte(fmt.Sprintf("hello,world %d", rand.Intn(10))), 1)
-			//p.SetPayload([]byte("hello,world"))
-			//n, err := p.WriteTo(client.conn)
-
-			n, err := client.WriteString("hello,world")
+			n, err := client.WriteString(strings.Repeat("hello,world", 1000))
 			if err != nil {
 				log.Println("ERROR: write to error", err)
 				break

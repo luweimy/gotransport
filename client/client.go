@@ -46,6 +46,6 @@ func (c *Client) Connect(network, address string) error {
 	if err != nil {
 		return err
 	}
-	c.Transport = gotransport.NewTransport(conn, c.opts).AsyncLoop()
+	c.Transport = gotransport.NewTransport(c.ctx, conn, c.opts).LoopAsync()
 	return nil
 }
