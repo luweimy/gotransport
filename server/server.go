@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net"
 	"time"
@@ -42,10 +43,20 @@ func (s *Server) Listen(network, address string) error {
 	if s.ln != nil {
 		return ErrMultipleListenCalls
 	}
-	ln, err := net.Listen(network, address)
+
+	var (
+		ln  net.Listener
+		err error
+	)
+	if s.opts.ConfigTLS != nil {
+		ln, err = tls.Listen(network, address, s.opts.ConfigTLS)
+	} else {
+		ln, err = net.Listen(network, address)
+	}
 	if err != nil {
 		return err
 	}
+
 	s.ln = ln
 	return s.listenLoop(ln)
 }

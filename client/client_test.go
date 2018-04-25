@@ -18,7 +18,7 @@ func errorCheck(err error) {
 
 func TestClient(t *testing.T) {
 	client := New()
-	client.Options(gotransport.WithFactory(gotransport.LineProtocol))
+	client.Options(gotransport.WithProtocol(gotransport.LineProtocol))
 	client.Options(gotransport.WithMessage(func(transport gotransport.Transport, packet gotransport.Protocol) {
 		fmt.Println(string(packet.Payload()))
 	}))

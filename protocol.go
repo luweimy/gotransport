@@ -13,12 +13,13 @@ var (
 type ProtocolFactory func() Protocol
 
 type Protocol interface {
+	// 最终写入的长度就是返回值n
 	WriteTo(w io.Writer) (n int, err error)
 
 	// ReadFrom decode from reader(net.Conn)
 	// err io.EOF must be throw out
 	// io.EOF错误务必要抛出来，这样transport可以自动关闭连接。
-	// 最终读取的Payload长度可能与返回值n不等，这是正常的，因为内部的解码会造成这种情况
+	// 读取的Payload长度可能与返回值n不等，这是正常的，因为内部的解码会造成这种情况
 	ReadFrom(r io.Reader) (n int, err error)
 
 	SetPayload([]byte)

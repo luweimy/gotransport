@@ -1,7 +1,7 @@
 package gotransport
 
 import (
-	"io"
+	"crypto/tls"
 	"net"
 )
 
@@ -9,9 +9,7 @@ type ConnectHandler func(transport Transport) bool
 type MessageHandler func(transport Transport, packet Protocol)
 type CloseHandler func(transport Transport)
 type ErrorHandler func(transport Transport, err error)
-
-type ReadWriterHookHandler func(rw io.ReadWriter) io.ReadWriter
-type ConnHookHandler func(conn net.Conn) net.Conn
+type HookHandler func(conn net.Conn) net.Conn
 
 type Options struct {
 	OnConnected ConnectHandler
@@ -21,9 +19,8 @@ type Options struct {
 	OnError     ErrorHandler
 	Factory     ProtocolFactory
 	BufferSize  int // size of transport reader buffer
-	Hooks       []ReadWriterHookHandler
-	ConnHooks   []ConnHookHandler
-	//workerSize int  // numbers of worker go-routines
+	Hooks       []HookHandler
+	ConfigTLS   *tls.Config
 }
 
 func MakeOptions() *Options {
@@ -64,7 +61,7 @@ func WithError(cb ErrorHandler) OptionFunc {
 	}
 }
 
-func WithFactory(factory ProtocolFactory) OptionFunc {
+func WithProtocol(factory ProtocolFactory) OptionFunc {
 	return func(o *Options) {
 		o.Factory = factory
 	}
@@ -76,15 +73,14 @@ func WithBufferSize(bufferSize int) OptionFunc {
 	}
 }
 
-// Hook conn read and write
-func WithHook(hook ReadWriterHookHandler) OptionFunc {
+func WithHook(hook HookHandler) OptionFunc {
 	return func(o *Options) {
 		o.Hooks = append(o.Hooks, hook)
 	}
 }
 
-func WithHookConn(hook ConnHookHandler) OptionFunc {
+func WithTLS(tlsConfig *tls.Config) OptionFunc {
 	return func(o *Options) {
-		o.ConnHooks = append(o.ConnHooks, hook)
+		o.ConfigTLS = tlsConfig
 	}
 }

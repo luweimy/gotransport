@@ -44,7 +44,6 @@ type TransportHijacker interface {
 type transport struct {
 	ctx  context.Context
 	conn net.Conn
-	rw   io.ReadWriter // 方便hook conn的读写
 	opts *Options
 }
 
@@ -55,15 +54,10 @@ func NewTransport(ctx context.Context, conn net.Conn, opts *Options) *transport 
 	t := &transport{
 		ctx:  ctx,
 		conn: conn,
-		rw:   conn,
 		opts: opts,
 	}
-	for _, hook := range opts.ConnHooks {
-		t.conn = hook(t.conn)
-	}
-	t.rw = t.conn
 	for _, hook := range opts.Hooks {
-		t.rw = hook(t.rw)
+		t.conn = hook(t.conn)
 	}
 	return t
 }
@@ -79,7 +73,7 @@ func (t *transport) ProtocolMake() Protocol {
 func (t *transport) Write(b []byte) (n int, err error) {
 	packet := t.ProtocolMake()
 	packet.SetPayload(b)
-	return packet.WriteTo(t.rw)
+	return packet.WriteTo(t.conn)
 }
 
 func (t *transport) WriteString(s string) (n int, err error) {
@@ -87,7 +81,7 @@ func (t *transport) WriteString(s string) (n int, err error) {
 }
 
 func (t *transport) WritePacket(packet Protocol) (n int, err error) {
-	return packet.WriteTo(t.rw)
+	return packet.WriteTo(t.conn)
 }
 
 func (t *transport) Close() error {
@@ -107,7 +101,7 @@ func (t *transport) IsClosed() bool {
 	if t.conn == nil {
 		return true
 	}
-	_, err := t.rw.Read([]byte{})
+	_, err := t.conn.Read([]byte{})
 	return IsClosedConnError(err)
 }
 
@@ -152,9 +146,8 @@ func (t *transport) readLoop() {
 	if t.opts.BufferSize > 0 {
 		bufferSize = t.opts.BufferSize
 	}
-	reader := bufio.NewReaderSize(t.rw, bufferSize)
+	reader := bufio.NewReaderSize(t.conn, bufferSize)
 	for {
-		// TODO: timeout 不准
 		select {
 		case <-t.ctx.Done():
 			return

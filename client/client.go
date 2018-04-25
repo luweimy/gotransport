@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net"
 	"sync"
@@ -39,13 +40,24 @@ func (c *Client) Options(opts ...gotransport.OptionFunc) {
 func (c *Client) Connect(network, address string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	if c.Transport != nil && !c.Transport.IsClosed() {
 		return ErrMultipleConnectCalls
 	}
-	conn, err := net.Dial(network, address)
+
+	var (
+		conn net.Conn
+		err  error
+	)
+	if c.opts.ConfigTLS != nil {
+		conn, err = tls.Dial(network, address, c.opts.ConfigTLS)
+	} else {
+		conn, err = net.Dial(network, address)
+	}
 	if err != nil {
 		return err
 	}
+
 	c.Transport = gotransport.NewTransport(c.ctx, conn, c.opts).LoopAsync()
 	return nil
 }

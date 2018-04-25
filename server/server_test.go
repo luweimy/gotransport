@@ -35,7 +35,7 @@ func onMessage(transport gotransport.Transport, packet gotransport.Protocol) {
 }
 
 func TestServer(t *testing.T) {
-	server := New(gotransport.WithFactory(gotransport.LineProtocol))
+	server := New(gotransport.WithProtocol(gotransport.LineProtocol))
 	server.Options(gotransport.WithConnected(onConnect))
 	server.Options(gotransport.WithClosed(onClose))
 	server.Options(gotransport.WithError(onErr))
