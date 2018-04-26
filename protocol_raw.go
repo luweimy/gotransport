@@ -20,12 +20,12 @@ func (p *rawProtocol) SetPayload(payload []byte) {
 	p.data = payload
 }
 
-func (p *rawProtocol) SetFlags(value interface{}) error {
-	return ErrFlagsNotSupport
+func (p *rawProtocol) SetFlagOptions(value interface{}) error {
+	return ErrOptionsNotSupport
 }
 
-func (p *rawProtocol) Flags() Flags {
-	return FlagsValue{}
+func (p *rawProtocol) FlagOptions() Value {
+	return nil
 }
 
 func (p *rawProtocol) WriteTo(w io.Writer) (int, error) {
@@ -33,7 +33,7 @@ func (p *rawProtocol) WriteTo(w io.Writer) (int, error) {
 }
 
 func (p *rawProtocol) ReadFrom(r io.Reader) (int, error) {
-	p.data = make([]byte, 1024)
+	p.data = make([]byte, BufferSize)
 	n, err := r.Read(p.data)
 	p.data = p.data[:n]
 	return n, err

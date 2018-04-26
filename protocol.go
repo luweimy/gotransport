@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	ErrFlagsNotSupport = errors.New("protocol: flags not support")
-	ErrTypeNotSupport  = errors.New("protocol: type not support")
+	ErrOptionsNotSupport = errors.New("protocol: options not support")
+	ErrTypeNotSupport    = errors.New("protocol: type not support")
 )
 
 type ProtocolFactory func() Protocol
@@ -22,15 +22,18 @@ type Protocol interface {
 	// 读取的Payload长度可能与返回值n不等，这是正常的，因为内部的解码会造成这种情况
 	ReadFrom(r io.Reader) (n int, err error)
 
+	// 设置和获取有效载荷数据
 	SetPayload([]byte)
 	Payload() []byte
 
-	SetFlags(value interface{}) error
-	Flags() Flags
+	// 设置/获取一些协议支持的选项和标记等
+	SetFlagOptions(value interface{}) error
+	FlagOptions() Value
 }
 
-type Flags interface {
+type Value interface {
 	Byte() byte
+	Bytes() []byte
 	Int8() int8
 	Int16() int16
 	Int32() int32
@@ -39,49 +42,69 @@ type Flags interface {
 	Uint16() uint16
 	Uint32() uint32
 	Uint64() uint64
+	Float32() float32
+	Float64() float64
 	Raw() interface{}
 }
 
-type FlagsValue struct {
+type valueBox struct {
 	value interface{}
 }
 
-func (v FlagsValue) Byte() byte {
+func WrapValue(v interface{}) Value {
+	return &valueBox{
+		value: v,
+	}
+}
+
+func (v valueBox) Byte() byte {
 	return v.value.(byte)
 }
 
-func (v FlagsValue) Int8() int8 {
+func (v valueBox) Bytes() []byte {
+	return v.value.([]byte)
+}
+
+func (v valueBox) Int8() int8 {
 	return v.value.(int8)
 }
 
-func (v FlagsValue) Int16() int16 {
+func (v valueBox) Int16() int16 {
 	return v.value.(int16)
 }
 
-func (v FlagsValue) Int32() int32 {
+func (v valueBox) Int32() int32 {
 	return v.value.(int32)
 }
 
-func (v FlagsValue) Int64() int64 {
+func (v valueBox) Int64() int64 {
 	return v.value.(int64)
 }
 
-func (v FlagsValue) Uint8() uint8 {
+func (v valueBox) Uint8() uint8 {
 	return v.value.(uint8)
 }
 
-func (v FlagsValue) Uint16() uint16 {
+func (v valueBox) Uint16() uint16 {
 	return v.value.(uint16)
 }
 
-func (v FlagsValue) Uint32() uint32 {
+func (v valueBox) Uint32() uint32 {
 	return v.value.(uint32)
 }
 
-func (v FlagsValue) Uint64() uint64 {
+func (v valueBox) Uint64() uint64 {
 	return v.value.(uint64)
 }
 
-func (v FlagsValue) Raw() interface{} {
+func (v valueBox) Float32() float32 {
+	return v.value.(float32)
+}
+
+func (v valueBox) Float64() float64 {
+	return v.value.(float64)
+}
+
+func (v valueBox) Raw() interface{} {
 	return v.value
 }

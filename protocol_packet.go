@@ -40,7 +40,7 @@ func (p *packetProtocol) SetPayload(payload []byte) {
 	p.value = payload
 }
 
-func (p *packetProtocol) SetFlags(value interface{}) error {
+func (p *packetProtocol) SetFlagOptions(value interface{}) error {
 	if tag, ok := value.(byte); ok {
 		p.tag = tag
 		return nil
@@ -48,8 +48,8 @@ func (p *packetProtocol) SetFlags(value interface{}) error {
 	return ErrTypeNotSupport
 }
 
-func (p *packetProtocol) Flags() Flags {
-	return FlagsValue{p.tag}
+func (p *packetProtocol) FlagOptions() Value {
+	return WrapValue(p.tag)
 }
 
 func (p *packetProtocol) WriteTo(w io.Writer) (int, error) {

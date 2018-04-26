@@ -21,12 +21,12 @@ func (l *lineProtocol) SetPayload(payload []byte) {
 	l.data = payload
 }
 
-func (l *lineProtocol) SetFlags(value interface{}) error {
-	return ErrFlagsNotSupport
+func (l *lineProtocol) SetFlagOptions(value interface{}) error {
+	return ErrOptionsNotSupport
 }
 
-func (l *lineProtocol) Flags() Flags {
-	return FlagsValue{}
+func (l *lineProtocol) FlagOptions() Value {
+	return nil
 }
 
 func (l *lineProtocol) WriteTo(w io.Writer) (int, error) {

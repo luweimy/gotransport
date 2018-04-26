@@ -8,7 +8,6 @@ import (
 type ConnectHandler func(transport Transport) bool
 type MessageHandler func(transport Transport, packet Protocol)
 type CloseHandler func(transport Transport, err error)
-
 type HookHandler func(conn net.Conn) net.Conn
 
 type Options struct {

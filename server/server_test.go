@@ -24,7 +24,7 @@ func onClosing(transport gotransport.Transport, err error) {
 }
 
 func onMessage(transport gotransport.Transport, packet gotransport.Protocol) {
-	log.Println("ON-MSG", transport.Peer(), packet.Flags(), string(packet.Payload()))
+	log.Println("ON-MSG", transport.Peer(), packet.FlagOptions(), string(packet.Payload()))
 	//transport.WriteString(string(packet.Payload()))
 	transport.WritePacket(packet)
 }
