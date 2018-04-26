@@ -7,8 +7,8 @@ import (
 
 type ConnectHandler func(transport Transport) bool
 type MessageHandler func(transport Transport, packet Protocol)
-type CloseHandler func(transport Transport)
-type ErrorHandler func(transport Transport, err error)
+type CloseHandler func(transport Transport, err error)
+
 type HookHandler func(conn net.Conn) net.Conn
 
 type Options struct {
@@ -16,7 +16,6 @@ type Options struct {
 	OnMessage   MessageHandler
 	OnClosed    CloseHandler
 	OnClosing   CloseHandler
-	OnError     ErrorHandler
 	Factory     ProtocolFactory
 	BufferSize  int // size of transport reader buffer
 	Hooks       []HookHandler
@@ -43,21 +42,18 @@ func WithMessage(cb MessageHandler) OptionFunc {
 	}
 }
 
+// 可监听连接关闭是否发生错误
+// 即conn.Close()是否返回错误
 func WithClosed(cb CloseHandler) OptionFunc {
 	return func(o *Options) {
 		o.OnClosed = cb
 	}
 }
 
+// 可用于监听连接被关闭的错误原因
 func WithClosing(cb CloseHandler) OptionFunc {
 	return func(o *Options) {
 		o.OnClosing = cb
-	}
-}
-
-func WithError(cb ErrorHandler) OptionFunc {
-	return func(o *Options) {
-		o.OnError = cb
 	}
 }
 

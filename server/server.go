@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/luweimy/gotransport"
@@ -19,6 +20,7 @@ type Server struct {
 	ctx  context.Context
 
 	ln net.Listener
+	mu sync.Mutex
 }
 
 func New(opts ...gotransport.OptionFunc) *Server {
@@ -40,7 +42,9 @@ func (s *Server) Options(opts ...gotransport.OptionFunc) {
 //
 // The network must be "tcp", "tcp4", "tcp6", "unix" or "unixpacket".
 func (s *Server) Listen(network, address string) error {
+	s.mu.Lock()
 	if s.ln != nil {
+		s.mu.Unlock()
 		return ErrMultipleListenCalls
 	}
 
@@ -54,10 +58,13 @@ func (s *Server) Listen(network, address string) error {
 		ln, err = net.Listen(network, address)
 	}
 	if err != nil {
+		s.mu.Unlock()
 		return err
 	}
-
 	s.ln = ln
+	s.mu.Unlock()
+
+	// listen loop will block the goroutine
 	return s.listenLoop(ln)
 }
 
@@ -94,6 +101,7 @@ func (s *Server) listenLoop(ln net.Listener) error {
 				select {
 				case <-time.After(delay):
 				case <-s.ctx.Done():
+					return s.ctx.Err()
 				}
 				continue
 			}

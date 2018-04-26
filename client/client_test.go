@@ -22,8 +22,8 @@ func TestClient(t *testing.T) {
 	client.Options(gotransport.WithMessage(func(transport gotransport.Transport, packet gotransport.Protocol) {
 		fmt.Println(string(packet.Payload()))
 	}))
-	client.Options(gotransport.WithClosed(func(transport gotransport.Transport) {
-		fmt.Println("on-close")
+	client.Options(gotransport.WithClosing(func(transport gotransport.Transport, err error) {
+		fmt.Println("on-close", err)
 	}))
 	for {
 		time.Sleep(time.Second)

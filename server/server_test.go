@@ -19,13 +19,8 @@ func onConnect(transport gotransport.Transport) bool {
 	return true
 }
 
-func onErr(transport gotransport.Transport, err error) {
-	log.Println("ON-ERR", err)
-	transport.WriteString("!>err\n => ")
-}
-
-func onClose(transport gotransport.Transport) {
-	log.Println("ON-CLOSE", transport.Peer())
+func onClosing(transport gotransport.Transport, err error) {
+	log.Println("ON-CLOSE", transport.Peer(), err)
 }
 
 func onMessage(transport gotransport.Transport, packet gotransport.Protocol) {
@@ -37,8 +32,7 @@ func onMessage(transport gotransport.Transport, packet gotransport.Protocol) {
 func TestServer(t *testing.T) {
 	server := New(gotransport.WithProtocol(gotransport.LineProtocol))
 	server.Options(gotransport.WithConnected(onConnect))
-	server.Options(gotransport.WithClosed(onClose))
-	server.Options(gotransport.WithError(onErr))
+	server.Options(gotransport.WithClosing(onClosing))
 	server.Options(gotransport.WithMessage(onMessage))
 
 	//go func() {

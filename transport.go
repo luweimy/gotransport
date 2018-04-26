@@ -3,12 +3,11 @@ package gotransport
 import (
 	"bufio"
 	"context"
-	"io"
 	"net"
 )
 
 const (
-	DefaultBufferSize = 1024
+	BufferSize = 1024
 )
 
 // Transport representing a network connection
@@ -85,16 +84,7 @@ func (t *transport) WritePacket(packet Protocol) (n int, err error) {
 }
 
 func (t *transport) Close() error {
-	if t.opts.OnClosing != nil {
-		t.opts.OnClosing(t)
-	}
-	if err := t.conn.Close(); err != nil {
-		return err
-	}
-	if t.opts.OnClosed != nil {
-		t.opts.OnClosed(t)
-	}
-	return nil
+	return t.close(nil)
 }
 
 func (t *transport) IsClosed() bool {
@@ -132,44 +122,48 @@ func (t *transport) LoopAsync() *transport {
 }
 
 func (t *transport) readLoop() {
+	var readErr error
 	defer func() {
 		if err := recover(); err != nil {
-			t.callErr(errorWrap(err))
+			readErr = errorWrap(err)
 		}
-		if err := t.Close(); err != nil {
-			t.callErr(err)
-			return
-		}
+		t.close(readErr)
 	}()
 
-	bufferSize := DefaultBufferSize
+	buffSize := BufferSize
 	if t.opts.BufferSize > 0 {
-		bufferSize = t.opts.BufferSize
+		buffSize = t.opts.BufferSize
 	}
-	reader := bufio.NewReaderSize(t.conn, bufferSize)
+	reader := bufio.NewReaderSize(t.conn, buffSize)
 	for {
 		select {
 		case <-t.ctx.Done():
+			readErr = t.ctx.Err()
 			return
 		default:
 		}
 		packet := t.ProtocolMake()
-		_, err := packet.ReadFrom(reader)
-		if err != nil {
-			if err == io.EOF {
-				return
-			}
-			t.callErr(err)
+		_, readErr = packet.ReadFrom(reader)
+		if readErr != nil {
 			return
 		}
-		if t.opts.OnMessage != nil {
-			t.opts.OnMessage(t, packet)
-		}
+		t.notify(packet)
 	}
 }
 
-func (t *transport) callErr(err error) {
-	if t.opts.OnError != nil {
-		t.opts.OnError(t, err)
+func (t *transport) close(err error) error {
+	if t.opts.OnClosing != nil {
+		t.opts.OnClosing(t, err)
+	}
+	closeErr := t.conn.Close()
+	if t.opts.OnClosed != nil {
+		t.opts.OnClosed(t, closeErr)
+	}
+	return closeErr
+}
+
+func (t *transport) notify(packet Protocol) {
+	if t.opts.OnMessage != nil {
+		t.opts.OnMessage(t, packet)
 	}
 }
