@@ -32,18 +32,22 @@ type Transport interface {
 
 	ProtocolMake() Protocol
 
-	//Error() <-chan error
-	//Done() <-chan struct{}
+	// Notify close, the error is the reason of transport close
+	Done() <-chan error
 }
 
+// TransportHijacker hijack transport net.Conn
 type TransportHijacker interface {
 	Hijack() net.Conn
 }
 
 type transport struct {
 	ctx  context.Context
-	conn net.Conn
 	opts *Options
+	conn net.Conn
+
+	// Done chan
+	doneCh chan error
 }
 
 func NewTransport(ctx context.Context, conn net.Conn, opts *Options) *transport {
@@ -52,21 +56,15 @@ func NewTransport(ctx context.Context, conn net.Conn, opts *Options) *transport 
 	}
 	t := &transport{
 		ctx:  ctx,
-		conn: conn,
 		opts: opts,
+		conn: conn,
+
+		doneCh: make(chan error, 1),
 	}
 	for _, hook := range opts.Hooks {
 		t.conn = hook(t.conn)
 	}
 	return t
-}
-
-func (t *transport) Hijack() net.Conn {
-	return t.conn
-}
-
-func (t *transport) ProtocolMake() Protocol {
-	return t.opts.Factory()
 }
 
 func (t *transport) Write(b []byte) (n int, err error) {
@@ -101,6 +99,18 @@ func (t *transport) Peer() net.Addr {
 
 func (t *transport) Host() net.Addr {
 	return t.conn.LocalAddr()
+}
+
+func (t *transport) Done() <-chan error {
+	return t.doneCh
+}
+
+func (t *transport) Hijack() net.Conn {
+	return t.conn
+}
+
+func (t *transport) ProtocolMake() Protocol {
+	return t.opts.Factory()
 }
 
 func (t *transport) LoopSync() *transport {
@@ -155,6 +165,8 @@ func (t *transport) close(err error) error {
 	if t.opts.OnClosing != nil {
 		t.opts.OnClosing(t, err)
 	}
+	t.doneCh <- err
+	// close the conn
 	closeErr := t.conn.Close()
 	if t.opts.OnClosed != nil {
 		t.opts.OnClosed(t, closeErr)

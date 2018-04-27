@@ -22,6 +22,14 @@ type Client struct {
 	mu sync.Mutex
 }
 
+func Dial(network, address string, opts ...gotransport.OptionFunc) (*Client, error) {
+	client := New(opts...)
+	if err := client.Connect(network, address); err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
 func New(opts ...gotransport.OptionFunc) *Client {
 	c := &Client{
 		opts: gotransport.MakeOptions(),
@@ -44,7 +52,6 @@ func (c *Client) Connect(network, address string) error {
 	if c.Transport != nil && !c.Transport.IsClosed() {
 		return ErrMultipleConnectCalls
 	}
-
 	var (
 		conn net.Conn
 		err  error
@@ -59,5 +66,6 @@ func (c *Client) Connect(network, address string) error {
 	}
 
 	c.Transport = gotransport.NewTransport(c.ctx, conn, c.opts).LoopAsync()
+
 	return nil
 }
